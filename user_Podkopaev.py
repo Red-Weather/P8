@@ -2,14 +2,18 @@ import httpx
 #import json
 import pytest
 
-# Тесты:
+# Шаги:
 # 0. headers;
-# 1. Проверка аутентификации;
-# 2. Ошибка аутентификации;
-# 3. Верификация токена;
-# 4. Получение информаци о профиле;
-# 5. Получение списка всех профилей;
-# 6. Получение информации об администраторе по id (ошибка авторизации).
+# 1. Проверка успешной аутентификации;
+# 2. Ошибка аутентификации (неверный username);
+# 3. Ошибка аутентификации (неверный пароль);
+# 4. Ошибка аутентификации (пустые поля);
+# 5. Верификация токена;
+# 6. Получение информаци о профиле;
+# 7. Получение списка профилей;
+# 8. Получение информации об администраторе по id (ошибка авторизации).
+
+#res_1, _2, _3 - для удобства
 
 base_url = "https://secby.ru"
 
@@ -39,7 +43,7 @@ def test_login():
     assert res_1.json()["access_token"] is not None
 
 # 2
-def test_auth_error(headers):
+def test_auth_error_1():
     wlogpas = { #неверное имя пользователя
     "username": "userpodkopaev",
     "password": "Ladiesman34"
@@ -51,6 +55,30 @@ def test_auth_error(headers):
     assert wres.status_code == 401
 
 # 3
+def test_auth_error_2():
+    wlogpas = { #неверый пароль
+    "username": "userpodkopaev",
+    "password": "ladiesman"
+    }
+
+    wres = httpx.post(
+    f"{base_url}/api/auth/login", json=wlogpas
+    )
+    assert wres.status_code == 401
+
+#4
+def test_auth_error_3():
+    wlogpas = { #пустые поля
+    "username": "",
+    "password": ""
+    }
+
+    wres = httpx.post(
+    f"{base_url}/api/auth/login", json=wlogpas
+    )
+    assert wres.status_code == 401
+
+# 5
 def test_verify_token(headers):
     wres_token = httpx.post( #без токена
         f"{base_url}/api/auth/verify"
@@ -62,35 +90,30 @@ def test_verify_token(headers):
     )
     assert res_token.status_code == 200
 
-# 4
+# 6
 def test_get_my_profile(headers):
     res_2 = httpx.get(
         f"{base_url}/api/profiles/me", headers=headers)
     assert res_2.status_code == 200
-    """
-    print(
-        json.dumps(
-            res_2.json(),
-            indent=3
-        )
-    )
-    """
     assert res_2.json()["profile"]["username"] == "user_Podkopaev"
 
-# 5
-def test_get_all_profiles(headers): #доступно модератору и администратору
-    res_3 = httpx.get(f"{base_url}/api/profiles/",
+# 7
+def test_get_all_profiles(headers):
+    res_3 = httpx.get(f"{base_url}/api/profiles/", headers=headers,
             params={
                 "limit": 100,
                 "offset": 0
             }
     )
-    assert res_3.status_code == 403
+    #print(json.dumps(res_3.json(), indent=3), flush=True)
+    #Выводит только свой профиль
+    assert res_3.status_code == 200
+    assert len(res_3.json()["profiles"]) == 1 #проверка количества пользователей
 
-# 6
-def test_get_admin_profile(headers):
+# 8
+# Админ id=1
+def test_get_admin_profile():
     res_4 = httpx.get(
-        f"{base_url}/api/profiles/{1}", headers=headers
+        f"{base_url}/api/profiles/{1}"
     )
     assert res_4.status_code == 403
-

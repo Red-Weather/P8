@@ -2,7 +2,7 @@ import httpx
 import pytest
 #import json
 
-# Тесты:
+# Шаги:
 # 0. headers
 # 1. Проверка аутентификации;
 # 2. Верификация токена;
@@ -62,12 +62,7 @@ def test_get_all_profiles(headers):
         f"{base_url}/api/profiles/", headers=headers
     )
     assert res_3.status_code != 403
-    """
-    print (json.dumps(
-        res_3.json(),
-        indent=3
-    ))
-    """
+    assert len(res_3.json()["profiles"]) > 1
 
 # 5
 def test_get_admin_profile(headers):
@@ -77,3 +72,4 @@ def test_get_admin_profile(headers):
     assert res_4.status_code == 200
     assert res_4.json()["profile"]["email"] == "admin@example.com"
     #print(json.dumps(res_4.json(), indent=3), flush=True)
+
