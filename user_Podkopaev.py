@@ -1,35 +1,18 @@
 import httpx
-#import json
-import pytest
+from config import base_url
 
 # Шаги:
-# 0. headers;
 # 1. Проверка успешной аутентификации;
 # 2. Ошибка аутентификации (неверный username);
 # 3. Ошибка аутентификации (неверный пароль);
 # 4. Ошибка аутентификации (пустые поля);
-# 5. Верификация токена;
-# 6. Получение информаци о профиле;
-# 7. Получение списка профилей;
-# 8. Получение информации об администраторе по id (ошибка авторизации).
+# 5. Верификация токена (позитивный);
+# 6. Верификация токена (негативныый);
+# 7. Получение информаци о профиле;
+# 8. Получение списка профилей;
+# 9. Получение информации об администраторе по id (ошибка авторизации).
 
 #res_1, _2, _3 - для удобства
-
-base_url = "https://secby.ru"
-
-# 0
-@pytest.fixture
-def headers():
-    logpas = {  # верное имя пользователя
-        "username": "user_Podkopaev",
-        "password": "Ladiesman34"
-    }
-    res = httpx.post(
-        f"{base_url}/api/auth/login", json=logpas
-    )
-    print(res.json())
-    token = res.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
 # 1
 def test_login():
@@ -39,8 +22,10 @@ def test_login():
             "password": "Ladiesman34"
         }
     )
-    assert res_1.status_code == 200
-    assert res_1.json()["access_token"] is not None
+    assert res_1.status_code == 200, \
+        f"Expected 200, got {res_1.status_code}"
+    assert res_1.json()["access_token"] is not None, \
+        f"Expected access_token, got {res_1.json()["access_token"]}"
 
 # 2
 def test_auth_error_1():
@@ -52,7 +37,8 @@ def test_auth_error_1():
     wres = httpx.post(
     f"{base_url}/api/auth/login", json=wlogpas
     )
-    assert wres.status_code == 401
+    assert wres.status_code == 401, \
+        f"Expected 401, got {wres.status_code}"
 
 # 3
 def test_auth_error_2():
@@ -64,7 +50,8 @@ def test_auth_error_2():
     wres = httpx.post(
     f"{base_url}/api/auth/login", json=wlogpas
     )
-    assert wres.status_code == 401
+    assert wres.status_code == 401, \
+        f"Expected 401, got {wres.status_code}"
 
 #4
 def test_auth_error_3():
@@ -76,44 +63,51 @@ def test_auth_error_3():
     wres = httpx.post(
     f"{base_url}/api/auth/login", json=wlogpas
     )
-    assert wres.status_code == 401
+    assert wres.status_code == 401, \
+        f"Expected 401, got {wres.status_code}"
 
 # 5
-def test_verify_token(headers):
+def test_verify_token_wrong(us_headers):
     wres_token = httpx.post( #без токена
         f"{base_url}/api/auth/verify"
     )
-    assert wres_token.status_code == 403
-
-    res_token = httpx.post( #c токеном
-        f"{base_url}/api/auth/verify", headers=headers
-    )
-    assert res_token.status_code == 200
+    assert wres_token.status_code == 403, \
+        f"Expected 403, got {wres_token.status_code}"
 
 # 6
-def test_get_my_profile(headers):
-    res_2 = httpx.get(
-        f"{base_url}/api/profiles/me", headers=headers)
-    assert res_2.status_code == 200
-    assert res_2.json()["profile"]["username"] == "user_Podkopaev"
+def test_verify_token_right(us_headers):
+    res_token = httpx.post( #c токеном
+        f"{base_url}/api/auth/verify", headers=us_headers
+    )
+    assert res_token.status_code == 200, \
+        f"Expected 200, got {res_token.status_code}"
 
 # 7
-def test_get_all_profiles(headers):
-    res_3 = httpx.get(f"{base_url}/api/profiles/", headers=headers,
+def test_get_my_profile(us_headers):
+    res_2 = httpx.get(
+        f"{base_url}/api/profiles/me", headers=us_headers)
+    assert res_2.status_code == 200, \
+        f"Expected 200, got {res_2.status_code}"
+    assert res_2.json()["profile"]["username"] == "user_Podkopaev", \
+        f"Expected user_Podkopaev, got {res_2.json()["profile"]["username"]}"
+
+# 8
+def test_get_all_profiles(us_headers):
+    res_3 = httpx.get(f"{base_url}/api/profiles/", headers=us_headers,
             params={
                 "limit": 100,
                 "offset": 0
             }
     )
-    #print(json.dumps(res_3.json(), indent=3), flush=True)
-    #Выводит только свой профиль
-    assert res_3.status_code == 200
-    assert len(res_3.json()["profiles"]) == 1 #проверка количества пользователей
+    assert res_3.status_code == 200, f"Expected 200, got {res_3.status_code}"
+    assert len(res_3.json()["profiles"]) == 1,\
+        f"Expected 1, got {len(res_3.json()["profiles"])}"
 
-# 8
+# 9
 # Админ id=1
 def test_get_admin_profile():
     res_4 = httpx.get(
         f"{base_url}/api/profiles/{1}"
     )
-    assert res_4.status_code == 403
+    assert res_4.status_code == 403, \
+        f"Expected 403, got {res_4.status_code}"
